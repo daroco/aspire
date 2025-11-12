@@ -153,6 +153,9 @@
   <data name="NavMenuMetricsTab" xml:space="preserve">
     <value>Metrics</value>
   </data>
+  <data name="NavMenuApiTestingTab" xml:space="preserve">
+    <value>API Testing</value>
+  </data>
   <data name="MainLayoutAspire" xml:space="preserve">
     <value>Aspire</value>
   </data>

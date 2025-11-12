@@ -13,6 +13,7 @@ internal static class DashboardUrls
     public const string MetricsBasePath = "metrics";
     public const string StructuredLogsBasePath = "structuredlogs";
     public const string TracesBasePath = "traces";
+    public const string ApiTestingBasePath = "apitesting";
     public const string LoginBasePath = "login";
     public const string HealthBasePath = "health";
 
@@ -144,6 +145,17 @@ internal static class DashboardUrls
         if (spanId != null)
         {
             url = QueryHelpers.AddQueryString(url, "spanId", spanId);
+        }
+
+        return url;
+    }
+
+    public static string ApiTestingUrl(string? resource = null)
+    {
+        var url = $"/{ApiTestingBasePath}";
+        if (resource != null)
+        {
+            url += $"/resource/{Uri.EscapeDataString(resource)}";
         }
 
         return url;

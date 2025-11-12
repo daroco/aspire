@@ -62,6 +62,11 @@
         <target state="translated">Uç nokta güvenli değil</target>
         <note />
       </trans-unit>
+      <trans-unit id="NavMenuApiTestingTab">
+        <source>API Testing</source>
+        <target state="new">API Testing</target>
+        <note />
+      </trans-unit>
       <trans-unit id="NavMenuConsoleLogsTab">
         <source>Console</source>
         <target state="translated">Konsol</target>

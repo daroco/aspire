@@ -1,0 +1,127 @@
+@page "/apitesting"
+@page "/apitesting/resource/{resourceName}"
+
+@using Aspire.Dashboard.Model
+@using Aspire.Dashboard.Model.Otlp
+@using Aspire.Dashboard.Resources
+@using Aspire.Dashboard.Utils
+@using System.Text.Json
+@using Aspire.Dashboard.Components.Controls.Grid
+
+@inject IJSRuntime JS
+
+@implements IDisposable
+
+<PageTitle>
+    <ApplicationName
+        AdditionalText="@PageViewModel.SelectedResource.Id?.ReplicaSetName"
+        ResourceName="@nameof(Dashboard.Resources.ApiTesting.ApiTestingPageTitle)"
+        Loc="@Loc"/>
+</PageTitle>
+
+<div class="page-content-container">
+    <AspirePageContentLayout AddNewlineOnToolbar="true" @ref="@_contentLayout">
+        <PageTitleSection>
+            <h1 class="page-header">@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingHeader)]</h1>
+        </PageTitleSection>
+        <ToolbarSection>
+            <ResourceSelect Resources="_resourceViewModels"
+                            AriaLabel="@ControlsStringsLoc[nameof(ControlsStrings.SelectAResource)]"
+                            @bind-SelectedResource="PageViewModel.SelectedResource"
+                            @bind-SelectedResource:after="HandleSelectedResourceChanged"
+                            CanSelectGrouping="false"
+                            LabelClass="toolbar-left" />
+        </ToolbarSection>
+        <MainSection>
+            @if (PageViewModel.SelectedResource.Id is not null)
+            {
+                <div class="api-testing-container">
+                    <div class="api-request-section">
+                        <h3>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingRequestHeader)]</h3>
+                        
+                        <div class="request-method-url">
+                            <FluentSelect TOption="string" @bind-Value="_selectedMethod" Style="width: 120px;">
+                                <FluentOption TOption="string" Value="GET">GET</FluentOption>
+                                <FluentOption TOption="string" Value="POST">POST</FluentOption>
+                                <FluentOption TOption="string" Value="PUT">PUT</FluentOption>
+                                <FluentOption TOption="string" Value="DELETE">DELETE</FluentOption>
+                                <FluentOption TOption="string" Value="PATCH">PATCH</FluentOption>
+                            </FluentSelect>
+                            
+                            <FluentTextField @bind-Value="_requestUrl" 
+                                            Placeholder="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingUrlPlaceholder)]"
+                                            Style="flex: 1; margin-left: 8px; margin-right: 8px;"/>
+                            
+                            <FluentButton Appearance="Appearance.Accent" 
+                                         OnClick="SendRequestAsync"
+                                         Disabled="_isLoading">
+                                @if (_isLoading)
+                                {
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowSync())" />
+                                }
+                                else
+                                {
+                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingSendButton)]
+                                }
+                            </FluentButton>
+                        </div>
+
+                        <FluentTabs>
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingHeadersTab)]">
+                                <FluentTextArea @bind-Value="_requestHeaders" 
+                                               Rows="5"
+                                               Placeholder="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingHeadersPlaceholder)]"
+                                               Style="width: 100%; margin-top: 8px;"/>
+                            </FluentTab>
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingBodyTab)]">
+                                <FluentTextArea @bind-Value="_requestBody" 
+                                               Rows="10"
+                                               Placeholder="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingBodyPlaceholder)]"
+                                               Style="width: 100%; margin-top: 8px;"/>
+                            </FluentTab>
+                        </FluentTabs>
+                    </div>
+
+                    @if (_responseInfo is not null)
+                    {
+                        <div class="api-response-section">
+                            <h3>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingResponseHeader)]</h3>
+                            
+                            <div class="response-status">
+                                <strong>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingStatus)]:</strong> 
+                                <span class="@GetStatusClass(_responseInfo.StatusCode)">@_responseInfo.StatusCode @_responseInfo.StatusDescription</span>
+                                <span style="margin-left: 16px;"><strong>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingTime)]:</strong> @_responseInfo.ElapsedMilliseconds ms</span>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(_responseInfo.TraceId))
+                            {
+                                <div class="response-trace">
+                                    <strong>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingTraceId)]:</strong> 
+                                    <FluentAnchor Href="@GetTraceUrl(_responseInfo.TraceId)" Appearance="Appearance.Hypertext">
+                                        @OtlpHelpers.ToShortenedId(_responseInfo.TraceId)
+                                    </FluentAnchor>
+                                </div>
+                            }
+
+                            <FluentTabs>
+                                <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingBodyTab)]">
+                                    <pre class="response-body">@_responseInfo.Body</pre>
+                                </FluentTab>
+                                <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingHeadersTab)]">
+                                    <pre class="response-headers">@_responseInfo.Headers</pre>
+                                </FluentTab>
+                            </FluentTabs>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <FluentIcon Value="@(new Icons.Regular.Size24.Code())" Style="font-size: 48px;"/>
+                    <p>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingEmptyState)]</p>
+                </div>
+            }
+        </MainSection>
+    </AspirePageContentLayout>
+</div>

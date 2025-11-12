@@ -1,0 +1,67 @@
+.api-testing-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 16px;
+    height: 100%;
+}
+
+.api-request-section, .api-response-section {
+    background: var(--neutral-layer-1);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--neutral-stroke-layer-rest);
+}
+
+.request-method-url {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.response-status, .response-trace {
+    margin-bottom: 12px;
+    padding: 8px;
+    background: var(--neutral-layer-2);
+    border-radius: 4px;
+}
+
+.status-success {
+    color: var(--success);
+}
+
+.status-client-error {
+    color: var(--warning);
+}
+
+.status-server-error {
+    color: var(--error);
+}
+
+.status-other {
+    color: var(--neutral-foreground-rest);
+}
+
+.response-body, .response-headers {
+    background: var(--neutral-layer-2);
+    padding: 12px;
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 400px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    color: var(--neutral-foreground-hint);
+}
+
+.empty-state fluent-icon {
+    margin-bottom: 16px;
+}

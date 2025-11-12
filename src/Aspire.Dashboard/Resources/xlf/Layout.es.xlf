@@ -62,6 +62,11 @@
         <target state="translated">El punto de conexión no es seguro</target>
         <note />
       </trans-unit>
+      <trans-unit id="NavMenuApiTestingTab">
+        <source>API Testing</source>
+        <target state="new">API Testing</target>
+        <note />
+      </trans-unit>
       <trans-unit id="NavMenuConsoleLogsTab">
         <source>Console</source>
         <target state="translated">Consola</target>

@@ -75,6 +75,13 @@ public partial class MobileNavMenu : ComponentBase
         );
 
         yield return new MobileNavMenuEntry(
+            Loc[nameof(Resources.Layout.NavMenuApiTestingTab)],
+            () => NavigateToAsync(DashboardUrls.ApiTestingUrl()),
+            DesktopNavMenu.ApiTestingIcon(),
+            LinkMatchRegex: GetNonIndexPageRegex(DashboardUrls.ApiTestingUrl())
+        );
+
+        yield return new MobileNavMenuEntry(
             Loc[nameof(Resources.Layout.MainLayoutAspireRepoLink)],
             async () =>
             {

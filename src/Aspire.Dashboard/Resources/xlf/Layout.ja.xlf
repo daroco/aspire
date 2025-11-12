@@ -62,6 +62,11 @@
         <target state="translated">エンドポイントはセキュリティで保護されていません</target>
         <note />
       </trans-unit>
+      <trans-unit id="NavMenuApiTestingTab">
+        <source>API Testing</source>
+        <target state="new">API Testing</target>
+        <note />
+      </trans-unit>
       <trans-unit id="NavMenuConsoleLogsTab">
         <source>Console</source>
         <target state="translated">コンソール</target>

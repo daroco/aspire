@@ -36,8 +36,118 @@
             @if (PageViewModel.SelectedResource.Id is not null)
             {
                 <div class="api-testing-container">
+                    <div class="api-sidebar">
+                        <FluentTabs Orientation="Orientation.Vertical">
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingEndpoints)]">
+                                <div class="sidebar-content">
+                                    @if (_discoveredEndpoints.Any())
+                                    {
+                                        @foreach (var endpoint in _discoveredEndpoints)
+                                        {
+                                            <div class="endpoint-item">
+                                                <div class="endpoint-header">
+                                                    <span class="endpoint-method method-@endpoint.Method.ToLowerInvariant()">@endpoint.Method</span>
+                                                    <span class="endpoint-path">@endpoint.Path</span>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(endpoint.Summary))
+                                                {
+                                                    <div class="endpoint-summary">@endpoint.Summary</div>
+                                                }
+                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="() => LoadEndpoint(endpoint)">
+                                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingLoadEndpoint)]
+                                                </FluentButton>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p>No OpenAPI endpoints discovered</p>
+                                    }
+                                </div>
+                            </FluentTab>
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingHistory)]">
+                                <div class="sidebar-content">
+                                    @if (_history.Any())
+                                    {
+                                        <FluentButton Appearance="Appearance.Lightweight" OnClick="ClearHistoryAsync" Style="margin-bottom: 8px;">
+                                            @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingClearHistory)]
+                                        </FluentButton>
+                                        @foreach (var request in _history)
+                                        {
+                                            <div class="history-item" @onclick="() => LoadFromHistory(request)">
+                                                <div><strong>@request.Method</strong> @request.Url</div>
+                                                <div class="history-time">@request.LastUsedAt.ToString("g")</div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p>No request history</p>
+                                    }
+                                </div>
+                            </FluentTab>
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingFavorites)]">
+                                <div class="sidebar-content">
+                                    @if (_favorites.Any())
+                                    {
+                                        @foreach (var request in _favorites)
+                                        {
+                                            <div class="favorite-item">
+                                                <div @onclick="() => LoadFromHistory(request)" style="cursor: pointer;">
+                                                    <div><strong>@request.Name</strong></div>
+                                                    <div class="favorite-url">@request.Method @request.Url</div>
+                                                </div>
+                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="() => RemoveFromFavoritesAsync(request.Id)">
+                                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingRemoveFromFavorites)]
+                                                </FluentButton>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p>No favorites</p>
+                                    }
+                                </div>
+                            </FluentTab>
+                            <FluentTab Label="@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingEnvironmentVariables)]">
+                                <div class="sidebar-content">
+                                    <div class="env-var-info">
+                                        <p>Use <code>{{`{variable}`}}</code> in URLs, headers, or body</p>
+                                    </div>
+                                    @if (_environmentVariables.Any())
+                                    {
+                                        @foreach (var variable in _environmentVariables)
+                                        {
+                                            <div class="env-var-item">
+                                                <strong>@variable.Key:</strong> @(variable.IsSecret ? "****" : variable.Value)
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p>No environment variables</p>
+                                    }
+                                </div>
+                            </FluentTab>
+                        </FluentTabs>
+                    </div>
+                    
                     <div class="api-request-section">
-                        <h3>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingRequestHeader)]</h3>
+                        <div class="request-header">
+                            <h3>@Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingRequestHeader)]</h3>
+                            <div class="request-actions">
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="AddToFavoritesAsync">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Star())" />
+                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingAddToFavorites)]
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="ExportAsCurlAsync">
+                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingExportAsCurl)]
+                                </FluentButton>
+                                <FluentButton Appearance="Appearance.Lightweight" OnClick="ExportAsCSharpAsync">
+                                    @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingExportAsCSharp)]
+                                </FluentButton>
+                            </div>
+                        </div>
                         
                         <div class="request-method-url">
                             <FluentSelect TOption="string" @bind-Value="_selectedMethod" Style="width: 120px;">

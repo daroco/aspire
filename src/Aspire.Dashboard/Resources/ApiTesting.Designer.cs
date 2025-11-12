@@ -185,5 +185,158 @@ namespace Aspire.Dashboard.Resources {
                 return ResourceManager.GetString("ApiTestingEmptyState", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to History.
+        /// </summary>
+        public static string ApiTestingHistory {
+            get {
+                return ResourceManager.GetString("ApiTestingHistory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Favorites.
+        /// </summary>
+        public static string ApiTestingFavorites {
+            get {
+                return ResourceManager.GetString("ApiTestingFavorites", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Environment Variables.
+        /// </summary>
+        public static string ApiTestingEnvironmentVariables {
+            get {
+                return ResourceManager.GetString("ApiTestingEnvironmentVariables", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export.
+        /// </summary>
+        public static string ApiTestingExport {
+            get {
+                return ResourceManager.GetString("ApiTestingExport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export as cURL.
+        /// </summary>
+        public static string ApiTestingExportAsCurl {
+            get {
+                return ResourceManager.GetString("ApiTestingExportAsCurl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Export as C#.
+        /// </summary>
+        public static string ApiTestingExportAsCSharp {
+            get {
+                return ResourceManager.GetString("ApiTestingExportAsCSharp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Add to Favorites.
+        /// </summary>
+        public static string ApiTestingAddToFavorites {
+            get {
+                return ResourceManager.GetString("ApiTestingAddToFavorites", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Remove from Favorites.
+        /// </summary>
+        public static string ApiTestingRemoveFromFavorites {
+            get {
+                return ResourceManager.GetString("ApiTestingRemoveFromFavorites", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Clear History.
+        /// </summary>
+        public static string ApiTestingClearHistory {
+            get {
+                return ResourceManager.GetString("ApiTestingClearHistory", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Add Variable.
+        /// </summary>
+        public static string ApiTestingAddEnvironmentVariable {
+            get {
+                return ResourceManager.GetString("ApiTestingAddEnvironmentVariable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Key.
+        /// </summary>
+        public static string ApiTestingVariableKey {
+            get {
+                return ResourceManager.GetString("ApiTestingVariableKey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Value.
+        /// </summary>
+        public static string ApiTestingVariableValue {
+            get {
+                return ResourceManager.GetString("ApiTestingVariableValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Endpoints.
+        /// </summary>
+        public static string ApiTestingEndpoints {
+            get {
+                return ResourceManager.GetString("ApiTestingEndpoints", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Load.
+        /// </summary>
+        public static string ApiTestingLoadEndpoint {
+            get {
+                return ResourceManager.GetString("ApiTestingLoadEndpoint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Save.
+        /// </summary>
+        public static string ApiTestingSaveFavorite {
+            get {
+                return ResourceManager.GetString("ApiTestingSaveFavorite", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        public static string ApiTestingFavoriteName {
+            get {
+                return ResourceManager.GetString("ApiTestingFavoriteName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Description.
+        /// </summary>
+        public static string ApiTestingFavoriteDescription {
+            get {
+                return ResourceManager.GetString("ApiTestingFavoriteDescription", resourceCulture);
+            }
+        }
     }
 }

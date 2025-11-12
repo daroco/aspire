@@ -101,4 +101,55 @@
   <data name="ApiTestingEmptyState" xml:space="preserve">
     <value>Select a resource to begin testing APIs</value>
   </data>
+  <data name="ApiTestingHistory" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="ApiTestingFavorites" xml:space="preserve">
+    <value>Favorites</value>
+  </data>
+  <data name="ApiTestingEnvironmentVariables" xml:space="preserve">
+    <value>Environment Variables</value>
+  </data>
+  <data name="ApiTestingExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="ApiTestingExportAsCurl" xml:space="preserve">
+    <value>Export as cURL</value>
+  </data>
+  <data name="ApiTestingExportAsCSharp" xml:space="preserve">
+    <value>Export as C#</value>
+  </data>
+  <data name="ApiTestingAddToFavorites" xml:space="preserve">
+    <value>Add to Favorites</value>
+  </data>
+  <data name="ApiTestingRemoveFromFavorites" xml:space="preserve">
+    <value>Remove from Favorites</value>
+  </data>
+  <data name="ApiTestingClearHistory" xml:space="preserve">
+    <value>Clear History</value>
+  </data>
+  <data name="ApiTestingAddEnvironmentVariable" xml:space="preserve">
+    <value>Add Variable</value>
+  </data>
+  <data name="ApiTestingVariableKey" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="ApiTestingVariableValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="ApiTestingEndpoints" xml:space="preserve">
+    <value>Endpoints</value>
+  </data>
+  <data name="ApiTestingLoadEndpoint" xml:space="preserve">
+    <value>Load</value>
+  </data>
+  <data name="ApiTestingSaveFavorite" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ApiTestingFavoriteName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ApiTestingFavoriteDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
 </root>

@@ -103,12 +103,16 @@ public partial class ApiTesting : IDisposable
         // Subscribe to dashboard resources to get URLs
         if (DashboardClient.IsEnabled)
         {
+            Logger.LogInformation("[API Testing] DashboardClient is enabled, subscribing to resources");
             _dashboardResourceSubscriptionCts = new CancellationTokenSource();
             var (snapshot, subscription) = await DashboardClient.SubscribeResourcesAsync(_dashboardResourceSubscriptionCts.Token);
 
+            Logger.LogInformation("[API Testing] Received {Count} resources in initial snapshot", snapshot.Length);
             foreach (var resource in snapshot)
             {
                 _resourceByName[resource.Name] = resource;
+                Logger.LogDebug("[API Testing] Initial resource: {ResourceName} with {UrlCount} URLs", 
+                    resource.Name, resource.Urls.Length);
             }
 
             _ = Task.Run(async () =>
@@ -123,6 +127,8 @@ public partial class ApiTesting : IDisposable
                         if (changeType == ResourceViewModelChangeType.Upsert)
                         {
                             _resourceByName[resource.Name] = resource;
+                            Logger.LogDebug("[API Testing] Resource update: {ResourceName} with {UrlCount} URLs", 
+                                resource.Name, resource.Urls.Length);
                             
                             // Only refresh if this update affects the currently selected resource
                             if (PageViewModel.SelectedResource.Id != null)
@@ -138,6 +144,7 @@ public partial class ApiTesting : IDisposable
                         else if (changeType == ResourceViewModelChangeType.Delete)
                         {
                             _resourceByName.TryRemove(resource.Name, out _);
+                            Logger.LogDebug("[API Testing] Resource deleted: {ResourceName}", resource.Name);
                         }
                         
                         if (shouldRefresh)
@@ -147,6 +154,10 @@ public partial class ApiTesting : IDisposable
                     }
                 }
             }, _dashboardResourceSubscriptionCts.Token);
+        }
+        else
+        {
+            Logger.LogWarning("[API Testing] DashboardClient is NOT enabled!");
         }
     }
 
@@ -172,6 +183,10 @@ public partial class ApiTesting : IDisposable
 
     private async Task HandleSelectedResourceChanged()
     {
+        Logger.LogInformation("[API Testing] Resource selection changed. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+            PageViewModel.SelectedResource.Id?.ReplicaSetName, 
+            PageViewModel.SelectedResource.Id?.InstanceId);
+        
         NavigationManager.NavigateTo(DashboardUrls.ApiTestingUrl(resource: PageViewModel.SelectedResource.Id?.ReplicaSetName));
         
         // Discover OpenAPI endpoints when a resource is selected
@@ -192,8 +207,15 @@ public partial class ApiTesting : IDisposable
     {
         if (PageViewModel.SelectedResource.Id is null)
         {
+            Logger.LogDebug("[API Testing] FindDashboardResource: SelectedResource.Id is null");
             return null;
         }
+
+        Logger.LogInformation("[API Testing] FindDashboardResource called. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+            PageViewModel.SelectedResource.Id.ReplicaSetName, 
+            PageViewModel.SelectedResource.Id.InstanceId);
+        Logger.LogInformation("[API Testing] Available resources in _resourceByName: {Resources}", 
+            string.Join(", ", _resourceByName.Keys));
 
         ResourceViewModel? dashboardResource = null;
         
@@ -201,29 +223,70 @@ public partial class ApiTesting : IDisposable
         if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.ReplicaSetName))
         {
             var replicaSetName = PageViewModel.SelectedResource.Id.ReplicaSetName;
+            Logger.LogInformation("[API Testing] Trying to find resource by ReplicaSetName: {ReplicaSetName}", replicaSetName);
             
             // For replicas, try to find by ReplicaSetName or by full name with instance
             if (!_resourceByName.TryGetValue(replicaSetName, out dashboardResource))
             {
+                Logger.LogDebug("[API Testing] Not found by exact ReplicaSetName");
+                
                 // Try with instance ID appended (full resource name)
                 if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
                 {
                     var fullName = $"{replicaSetName}_{PageViewModel.SelectedResource.Id.InstanceId}";
+                    Logger.LogInformation("[API Testing] Trying with full name: {FullName}", fullName);
                     _resourceByName.TryGetValue(fullName, out dashboardResource);
+                    
+                    if (dashboardResource != null)
+                    {
+                        Logger.LogInformation("[API Testing] Found resource by full name!");
+                    }
                 }
                 
                 // If still not found, try to find any resource starting with the replica set name
                 if (dashboardResource == null)
                 {
+                    Logger.LogInformation("[API Testing] Trying prefix match for: {ReplicaSetName}", replicaSetName);
                     dashboardResource = _resourceByName.Values.FirstOrDefault(r => 
                         r.Name.StartsWith(replicaSetName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (dashboardResource != null)
+                    {
+                        Logger.LogInformation("[API Testing] Found resource by prefix match: {ResourceName}", dashboardResource.Name);
+                    }
                 }
+            }
+            else
+            {
+                Logger.LogInformation("[API Testing] Found resource by exact ReplicaSetName match!");
             }
         }
         // Fallback to InstanceId
         else if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
         {
-            _resourceByName.TryGetValue(PageViewModel.SelectedResource.Id.InstanceId, out dashboardResource);
+            var instanceId = PageViewModel.SelectedResource.Id.InstanceId;
+            Logger.LogInformation("[API Testing] Trying to find resource by InstanceId: {InstanceId}", instanceId);
+            _resourceByName.TryGetValue(instanceId, out dashboardResource);
+            
+            if (dashboardResource != null)
+            {
+                Logger.LogInformation("[API Testing] Found resource by InstanceId!");
+            }
+        }
+
+        if (dashboardResource != null)
+        {
+            Logger.LogInformation("[API Testing] FindDashboardResource SUCCESS: Found {ResourceName} with {UrlCount} URLs", 
+                dashboardResource.Name, dashboardResource.Urls.Length);
+            
+            for (int i = 0; i < dashboardResource.Urls.Length; i++)
+            {
+                Logger.LogInformation("[API Testing]   URL[{Index}]: {Url}", i, dashboardResource.Urls[i].Url);
+            }
+        }
+        else
+        {
+            Logger.LogWarning("[API Testing] FindDashboardResource FAILED: Resource not found");
         }
 
         return dashboardResource;
@@ -231,17 +294,20 @@ public partial class ApiTesting : IDisposable
 
     private async Task DiscoverOpenApiEndpointsAsync()
     {
+        Logger.LogInformation("[API Testing] ===== DiscoverOpenApiEndpointsAsync START =====");
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] ===== DiscoverOpenApiEndpointsAsync START =====");
         _discoveredEndpoints.Clear();
 
         var dashboardResource = FindDashboardResource();
         if (dashboardResource == null)
         {
+            Logger.LogWarning("[API Testing] DiscoverOpenApiEndpointsAsync: dashboardResource is NULL - aborting");
             if (PageViewModel.SelectedResource.Id != null)
             {
-                Logger.LogDebug("Resource not found in dashboard client. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+                Logger.LogDebug("[API Testing] Resource not found in dashboard client. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
                     PageViewModel.SelectedResource.Id.ReplicaSetName, 
                     PageViewModel.SelectedResource.Id.InstanceId);
-                Logger.LogDebug("Available resources: {Resources}", string.Join(", ", _resourceByName.Keys));
+                Logger.LogDebug("[API Testing] Available resources: {Resources}", string.Join(", ", _resourceByName.Keys));
             }
             StateHasChanged();
             return;
@@ -250,10 +316,13 @@ public partial class ApiTesting : IDisposable
         // Get URLs from the resource
         if (dashboardResource.Urls.Length == 0)
         {
-            Logger.LogDebug("Resource {ResourceName} has no URLs", dashboardResource.Name);
+            Logger.LogWarning("[API Testing] Resource {ResourceName} has no URLs - aborting", dashboardResource.Name);
             StateHasChanged();
             return;
         }
+
+        Logger.LogInformation("[API Testing] Resource {ResourceName} has {UrlCount} URLs, attempting OpenAPI discovery", 
+            dashboardResource.Name, dashboardResource.Urls.Length);
 
         // Try each URL with common OpenAPI endpoints
         var openApiPaths = new[] { "/swagger/v1/swagger.json", "/openapi.json", "/api/openapi.json" };
@@ -261,49 +330,68 @@ public partial class ApiTesting : IDisposable
         foreach (var urlViewModel in dashboardResource.Urls)
         {
             var baseUrl = urlViewModel.Url.ToString().TrimEnd('/');
+            Logger.LogInformation("[API Testing] Trying base URL: {BaseUrl}", baseUrl);
             
             foreach (var path in openApiPaths)
             {
                 try
                 {
                     var openApiUrl = $"{baseUrl}{path}";
-                    Logger.LogDebug("Trying OpenAPI spec at {OpenApiUrl}", openApiUrl);
+                    Logger.LogInformation("[API Testing] >>> Attempting to fetch OpenAPI spec from: {OpenApiUrl}", openApiUrl);
                     
                     var response = await _httpClient.GetAsync(openApiUrl);
+                    
+                    Logger.LogInformation("[API Testing] >>> Response status: {StatusCode}", response.StatusCode);
                     
                     if (response.IsSuccessStatusCode)
                     {
                         var content = await response.Content.ReadAsStringAsync();
-                        Logger.LogInformation("Successfully retrieved OpenAPI spec from {OpenApiUrl}", openApiUrl);
+                        Logger.LogInformation("[API Testing] ✓✓✓ SUCCESS! Retrieved OpenAPI spec from {OpenApiUrl}, content length: {Length}", 
+                            openApiUrl, content.Length);
+                        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] ✓✓✓ SUCCESS! Retrieved OpenAPI spec from:", openApiUrl, "content length:", content.Length);
                         ParseOpenApiSpec(content);
+                        Logger.LogInformation("[API Testing] Parsed {EndpointCount} endpoints from OpenAPI spec", _discoveredEndpoints.Count);
+                        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Parsed endpoints:", _discoveredEndpoints.Count);
                         StateHasChanged();
                         return; // Found and parsed successfully
+                    }
+                    else
+                    {
+                        Logger.LogDebug("[API Testing] >>> Failed with status {StatusCode}", response.StatusCode);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogDebug(ex, "Failed to fetch OpenAPI spec from {BaseUrl}{Path}", baseUrl, path);
+                    Logger.LogWarning(ex, "[API Testing] >>> Exception fetching OpenAPI spec from {BaseUrl}{Path}: {Message}", 
+                        baseUrl, path, ex.Message);
                     // Continue to next path
                 }
             }
         }
 
-        Logger.LogDebug("No OpenAPI spec found for resource {ResourceName}", dashboardResource.Name);
+        Logger.LogWarning("[API Testing] ===== DiscoverOpenApiEndpointsAsync END - No OpenAPI spec found for resource {ResourceName} =====", 
+            dashboardResource.Name);
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] ===== END - No OpenAPI spec found for resource:", dashboardResource.Name);
         StateHasChanged();
     }
 
     private void ParseOpenApiSpec(string openApiJson)
     {
+        Logger.LogInformation("[API Testing] ParseOpenApiSpec: Starting to parse OpenAPI spec, length: {Length}", openApiJson.Length);
         try
         {
             var doc = JsonDocument.Parse(openApiJson);
+            Logger.LogInformation("[API Testing] ParseOpenApiSpec: Successfully parsed JSON");
             var root = doc.RootElement;
 
             if (root.TryGetProperty("paths", out var paths))
             {
+                Logger.LogInformation("[API Testing] ParseOpenApiSpec: Found 'paths' property");
+                var pathCount = 0;
                 foreach (var path in paths.EnumerateObject())
                 {
                     var pathValue = path.Name;
+                    Logger.LogDebug("[API Testing] ParseOpenApiSpec: Processing path: {Path}", pathValue);
                     
                     foreach (var operation in path.Value.EnumerateObject())
                     {
@@ -313,26 +401,37 @@ public partial class ApiTesting : IDisposable
                             var summary = operation.Value.TryGetProperty("summary", out var s) ? s.GetString() ?? "" : "";
                             var description = operation.Value.TryGetProperty("description", out var d) ? d.GetString() : null;
 
-                            _discoveredEndpoints.Add(new OpenApiEndpoint
+                            var endpoint = new OpenApiEndpoint
                             {
                                 Path = pathValue,
                                 Method = method,
                                 Summary = summary,
                                 Description = description
-                            });
+                            };
+                            _discoveredEndpoints.Add(endpoint);
+                            pathCount++;
+                            Logger.LogInformation("[API Testing] ParseOpenApiSpec: Added endpoint: {Method} {Path}", method, pathValue);
                         }
                     }
                 }
+                Logger.LogInformation("[API Testing] ParseOpenApiSpec: FINISHED - Added {Count} endpoints total", pathCount);
+            }
+            else
+            {
+                Logger.LogWarning("[API Testing] ParseOpenApiSpec: No 'paths' property found in OpenAPI spec!");
             }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to parse OpenAPI spec");
+            Logger.LogError(ex, "[API Testing] ParseOpenApiSpec: Exception parsing OpenAPI spec: {Message}", ex.Message);
         }
     }
 
-    private void LoadEndpoint(OpenApiEndpoint endpoint)
+    private async Task LoadEndpoint(OpenApiEndpoint endpoint)
     {
+        Logger.LogInformation("[API Testing] LoadEndpoint called: {Method} {Path}", endpoint.Method, endpoint.Path);
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] LoadEndpoint called:", endpoint.Method, endpoint.Path);
+        
         _selectedMethod = endpoint.Method;
         
         // Try to get the base URL from the selected resource
@@ -341,10 +440,14 @@ public partial class ApiTesting : IDisposable
         {
             var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
             _requestUrl = $"{baseUrl}{endpoint.Path}";
+            Logger.LogInformation("[API Testing] Set request URL to: {Url}", _requestUrl);
+            await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Set request URL to:", _requestUrl);
         }
         else
         {
             _requestUrl = endpoint.Path;
+            Logger.LogInformation("[API Testing] Set request URL to path only: {Path}", _requestUrl);
+            await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Set request URL to path only:", _requestUrl);
         }
         
         StateHasChanged();

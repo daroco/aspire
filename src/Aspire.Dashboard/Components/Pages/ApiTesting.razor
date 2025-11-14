@@ -42,6 +42,7 @@
                                 <div class="sidebar-content">
                                     @if (_discoveredEndpoints.Any())
                                     {
+                                        <p style="color: green; font-weight: bold;">Found @_discoveredEndpoints.Count endpoints</p>
                                         @foreach (var endpoint in _discoveredEndpoints)
                                         {
                                             <div class="endpoint-item">
@@ -53,7 +54,7 @@
                                                 {
                                                     <div class="endpoint-summary">@endpoint.Summary</div>
                                                 }
-                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="() => LoadEndpoint(endpoint)">
+                                                <FluentButton Appearance="Appearance.Lightweight" OnClick="async () => await LoadEndpoint(endpoint)">
                                                     @Loc[nameof(Dashboard.Resources.ApiTesting.ApiTestingLoadEndpoint)]
                                                 </FluentButton>
                                             </div>
@@ -61,7 +62,8 @@
                                     }
                                     else
                                     {
-                                        <p>No OpenAPI endpoints discovered</p>
+                                        <p style="color: orange; font-weight: bold;">No OpenAPI endpoints discovered (count: @_discoveredEndpoints.Count)</p>
+                                        <p style="color: gray; font-size: 0.9em;">Check browser console and server logs for details</p>
                                     }
                                 </div>
                             </FluentTab>

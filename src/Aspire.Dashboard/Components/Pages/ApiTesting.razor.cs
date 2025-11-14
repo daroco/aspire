@@ -163,12 +163,20 @@ public partial class ApiTesting : IDisposable
 
     protected override void OnParametersSet()
     {
+        Logger.LogInformation("[API Testing] OnParametersSet called. ResourceName parameter: {ResourceName}", ResourceName);
+        
         var selectedResource = _allResource;
 
         if (!string.IsNullOrEmpty(ResourceName) && _resourceViewModels is { Count: > 0 })
         {
             var resource = _resourceViewModels.GetResource(Logger, ResourceName, canSelectGrouping: false, _allResource);
             selectedResource = resource;
+            Logger.LogInformation("[API Testing] OnParametersSet: Found resource. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+                selectedResource.Id?.ReplicaSetName, selectedResource.Id?.InstanceId);
+        }
+        else
+        {
+            Logger.LogInformation("[API Testing] OnParametersSet: Using default 'All' resource");
         }
 
         PageViewModel.SelectedResource = selectedResource;
@@ -183,13 +191,34 @@ public partial class ApiTesting : IDisposable
 
     private async Task HandleSelectedResourceChanged()
     {
-        Logger.LogInformation("[API Testing] Resource selection changed. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+        Logger.LogInformation("[API Testing] HandleSelectedResourceChanged called. Name: {Name}, ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+            PageViewModel.SelectedResource.Name,
             PageViewModel.SelectedResource.Id?.ReplicaSetName, 
             PageViewModel.SelectedResource.Id?.InstanceId);
         
-        NavigationManager.NavigateTo(DashboardUrls.ApiTestingUrl(resource: PageViewModel.SelectedResource.Id?.ReplicaSetName));
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] HandleSelectedResourceChanged called. Name:", PageViewModel.SelectedResource.Name,
+            "ReplicaSetName:", PageViewModel.SelectedResource.Id?.ReplicaSetName, "InstanceId:", PageViewModel.SelectedResource.Id?.InstanceId);
+        
+        // Clear endpoints immediately to show we're discovering
+        _discoveredEndpoints.Clear();
+        
+        // Determine the resource identifier to use in the URL
+        // For replica resources, use ReplicaSetName to group them together
+        // For single resources, use the Name
+        string? urlResourceName = null;
+        if (PageViewModel.SelectedResource.Id != null)
+        {
+            urlResourceName = !string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.ReplicaSetName)
+                ? PageViewModel.SelectedResource.Id.ReplicaSetName
+                : PageViewModel.SelectedResource.Name;
+        }
+            
+        Logger.LogInformation("[API Testing] Navigating to URL with resource: {Resource}", urlResourceName);
+        NavigationManager.NavigateTo(DashboardUrls.ApiTestingUrl(resource: urlResourceName));
         
         // Discover OpenAPI endpoints when a resource is selected
+        // NOTE: The PageViewModel.SelectedResource is already set correctly by the dropdown binding
+        // We don't need to wait for OnParametersSet
         await DiscoverOpenApiEndpointsAsync();
     }
 
@@ -302,6 +331,7 @@ public partial class ApiTesting : IDisposable
         if (dashboardResource == null)
         {
             Logger.LogWarning("[API Testing] DiscoverOpenApiEndpointsAsync: dashboardResource is NULL - aborting");
+            await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] ===== END - dashboardResource is NULL =====");
             if (PageViewModel.SelectedResource.Id != null)
             {
                 Logger.LogDebug("[API Testing] Resource not found in dashboard client. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
@@ -313,10 +343,15 @@ public partial class ApiTesting : IDisposable
             return;
         }
 
+        Logger.LogInformation("[API Testing] Found dashboard resource: {ResourceName}, URLs count: {UrlCount}", 
+            dashboardResource.Name, dashboardResource.Urls.Length);
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Found dashboard resource:", dashboardResource.Name, "URLs count:", dashboardResource.Urls.Length);
+
         // Get URLs from the resource
         if (dashboardResource.Urls.Length == 0)
         {
             Logger.LogWarning("[API Testing] Resource {ResourceName} has no URLs - aborting", dashboardResource.Name);
+            await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] ===== END - No URLs found for resource:", dashboardResource.Name);
             StateHasChanged();
             return;
         }

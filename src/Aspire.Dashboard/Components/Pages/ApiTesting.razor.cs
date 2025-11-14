@@ -117,17 +117,33 @@ public partial class ApiTesting : IDisposable
                 {
                     foreach (var (changeType, resource) in batch)
                     {
-                        await InvokeAsync(() =>
+                        // Update the dictionary but don't trigger UI refresh unless it affects the selected resource
+                        var shouldRefresh = false;
+                        
+                        if (changeType == ResourceViewModelChangeType.Upsert)
                         {
-                            if (changeType == ResourceViewModelChangeType.Upsert)
+                            _resourceByName[resource.Name] = resource;
+                            
+                            // Only refresh if this update affects the currently selected resource
+                            if (PageViewModel.SelectedResource.Id != null)
                             {
-                                _resourceByName[resource.Name] = resource;
+                                var selectedReplicaSet = PageViewModel.SelectedResource.Id.ReplicaSetName;
+                                var selectedInstance = PageViewModel.SelectedResource.Id.InstanceId;
+                                
+                                shouldRefresh = resource.Name == selectedReplicaSet ||
+                                               resource.Name == selectedInstance ||
+                                               (selectedReplicaSet != null && resource.Name.StartsWith(selectedReplicaSet, StringComparison.OrdinalIgnoreCase));
                             }
-                            else if (changeType == ResourceViewModelChangeType.Delete)
-                            {
-                                _resourceByName.TryRemove(resource.Name, out _);
-                            }
-                        });
+                        }
+                        else if (changeType == ResourceViewModelChangeType.Delete)
+                        {
+                            _resourceByName.TryRemove(resource.Name, out _);
+                        }
+                        
+                        if (shouldRefresh)
+                        {
+                            await InvokeAsync(StateHasChanged);
+                        }
                     }
                 }
             }, _dashboardResourceSubscriptionCts.Token);
@@ -172,32 +188,70 @@ public partial class ApiTesting : IDisposable
         _environmentVariables.AddRange(_apiTestingService.GetEnvironmentVariables());
     }
 
+    private ResourceViewModel? FindDashboardResource()
+    {
+        if (PageViewModel.SelectedResource.Id is null)
+        {
+            return null;
+        }
+
+        ResourceViewModel? dashboardResource = null;
+        
+        // First try with ReplicaSetName (for replica resources)
+        if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.ReplicaSetName))
+        {
+            var replicaSetName = PageViewModel.SelectedResource.Id.ReplicaSetName;
+            
+            // For replicas, try to find by ReplicaSetName or by full name with instance
+            if (!_resourceByName.TryGetValue(replicaSetName, out dashboardResource))
+            {
+                // Try with instance ID appended (full resource name)
+                if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
+                {
+                    var fullName = $"{replicaSetName}_{PageViewModel.SelectedResource.Id.InstanceId}";
+                    _resourceByName.TryGetValue(fullName, out dashboardResource);
+                }
+                
+                // If still not found, try to find any resource starting with the replica set name
+                if (dashboardResource == null)
+                {
+                    dashboardResource = _resourceByName.Values.FirstOrDefault(r => 
+                        r.Name.StartsWith(replicaSetName, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+        }
+        // Fallback to InstanceId
+        else if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
+        {
+            _resourceByName.TryGetValue(PageViewModel.SelectedResource.Id.InstanceId, out dashboardResource);
+        }
+
+        return dashboardResource;
+    }
+
     private async Task DiscoverOpenApiEndpointsAsync()
     {
         _discoveredEndpoints.Clear();
 
-        if (PageViewModel.SelectedResource.Id is null)
+        var dashboardResource = FindDashboardResource();
+        if (dashboardResource == null)
         {
-            return;
-        }
-
-        // Get the dashboard resource by name
-        var resourceName = PageViewModel.SelectedResource.Id.ReplicaSetName ?? PageViewModel.SelectedResource.Id.InstanceId;
-        if (string.IsNullOrEmpty(resourceName))
-        {
-            return;
-        }
-
-        if (!_resourceByName.TryGetValue(resourceName, out var dashboardResource))
-        {
-            Logger.LogDebug("Resource {ResourceName} not found in dashboard client", resourceName);
+            if (PageViewModel.SelectedResource.Id != null)
+            {
+                Logger.LogDebug("Resource not found in dashboard client. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
+                    PageViewModel.SelectedResource.Id.ReplicaSetName, 
+                    PageViewModel.SelectedResource.Id.InstanceId);
+                Logger.LogDebug("Available resources: {Resources}", string.Join(", ", _resourceByName.Keys));
+            }
+            StateHasChanged();
             return;
         }
 
         // Get URLs from the resource
         if (dashboardResource.Urls.Length == 0)
         {
-            Logger.LogDebug("Resource {ResourceName} has no URLs", resourceName);
+            Logger.LogDebug("Resource {ResourceName} has no URLs", dashboardResource.Name);
+            StateHasChanged();
             return;
         }
 
@@ -234,7 +288,7 @@ public partial class ApiTesting : IDisposable
             }
         }
 
-        Logger.LogDebug("No OpenAPI spec found for resource {ResourceName}", resourceName);
+        Logger.LogDebug("No OpenAPI spec found for resource {ResourceName}", dashboardResource.Name);
         StateHasChanged();
     }
 
@@ -282,18 +336,11 @@ public partial class ApiTesting : IDisposable
         _selectedMethod = endpoint.Method;
         
         // Try to get the base URL from the selected resource
-        var resourceName = PageViewModel.SelectedResource.Id?.ReplicaSetName ?? PageViewModel.SelectedResource.Id?.InstanceId;
-        if (!string.IsNullOrEmpty(resourceName) && _resourceByName.TryGetValue(resourceName, out var dashboardResource))
+        var dashboardResource = FindDashboardResource();
+        if (dashboardResource != null && dashboardResource.Urls.Length > 0)
         {
-            if (dashboardResource.Urls.Length > 0)
-            {
-                var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
-                _requestUrl = $"{baseUrl}{endpoint.Path}";
-            }
-            else
-            {
-                _requestUrl = endpoint.Path;
-            }
+            var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+            _requestUrl = $"{baseUrl}{endpoint.Path}";
         }
         else
         {
@@ -458,18 +505,11 @@ public partial class ApiTesting : IDisposable
                 !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
                 // Try to get base URL from selected resource
-                var resourceName = PageViewModel.SelectedResource.Id?.ReplicaSetName ?? PageViewModel.SelectedResource.Id?.InstanceId;
-                if (!string.IsNullOrEmpty(resourceName) && _resourceByName.TryGetValue(resourceName, out var dashboardResource))
+                var dashboardResource = FindDashboardResource();
+                if (dashboardResource != null && dashboardResource.Urls.Length > 0)
                 {
-                    if (dashboardResource.Urls.Length > 0)
-                    {
-                        var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
-                        targetUrl = $"{baseUrl}/{_requestUrl.TrimStart('/')}";
-                    }
-                    else
-                    {
-                        Logger.LogWarning("Resource {ResourceName} has no URLs, using relative URL as-is", resourceName);
-                    }
+                    var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+                    targetUrl = $"{baseUrl}/{_requestUrl.TrimStart('/')}";
                 }
                 else
                 {

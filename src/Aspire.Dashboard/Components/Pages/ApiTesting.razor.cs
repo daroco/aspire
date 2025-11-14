@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net.Http.Headers;
@@ -26,6 +27,8 @@ public partial class ApiTesting : IDisposable
     private List<SelectViewModel<ResourceTypeDetails>> _resourceViewModels = default!;
     private Subscription? _resourcesSubscription;
     private AspirePageContentLayout? _contentLayout;
+    private readonly ConcurrentDictionary<string, ResourceViewModel> _resourceByName = new(StringComparers.ResourceName);
+    private CancellationTokenSource? _dashboardResourceSubscriptionCts;
     
     private string _selectedMethod = "GET";
     private string _requestUrl = string.Empty;
@@ -64,6 +67,9 @@ public partial class ApiTesting : IDisposable
     [Inject]
     public required IJSRuntime JSRuntime { get; init; }
 
+    [Inject]
+    public required IDashboardClient DashboardClient { get; init; }
+
     [CascadingParameter]
     public required ViewportInformation ViewportInformation { get; set; }
 
@@ -93,6 +99,39 @@ public partial class ApiTesting : IDisposable
         _apiTestingService = new ApiTestingService(LocalStorage);
         await _apiTestingService.InitializeAsync();
         RefreshCollections();
+
+        // Subscribe to dashboard resources to get URLs
+        if (DashboardClient.IsEnabled)
+        {
+            _dashboardResourceSubscriptionCts = new CancellationTokenSource();
+            var (snapshot, subscription) = await DashboardClient.SubscribeResourcesAsync(_dashboardResourceSubscriptionCts.Token);
+
+            foreach (var resource in snapshot)
+            {
+                _resourceByName[resource.Name] = resource;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                await foreach (var batch in subscription.ConfigureAwait(false))
+                {
+                    foreach (var (changeType, resource) in batch)
+                    {
+                        await InvokeAsync(() =>
+                        {
+                            if (changeType == ResourceViewModelChangeType.Upsert)
+                            {
+                                _resourceByName[resource.Name] = resource;
+                            }
+                            else if (changeType == ResourceViewModelChangeType.Delete)
+                            {
+                                _resourceByName.TryRemove(resource.Name, out _);
+                            }
+                        });
+                    }
+                }
+            }, _dashboardResourceSubscriptionCts.Token);
+        }
     }
 
     protected override void OnParametersSet()
@@ -142,52 +181,61 @@ public partial class ApiTesting : IDisposable
             return;
         }
 
-        // Try to fetch OpenAPI spec from common endpoints
-        var resource = _resources.FirstOrDefault(r => r.ResourceKey.ToString() == PageViewModel.SelectedResource.Id.InstanceId);
-        if (resource == null)
+        // Get the dashboard resource by name
+        var resourceName = PageViewModel.SelectedResource.Id.ReplicaSetName ?? PageViewModel.SelectedResource.Id.InstanceId;
+        if (string.IsNullOrEmpty(resourceName))
         {
             return;
         }
 
-        // Get base URL from resource
-        var baseUrl = await TryGetResourceBaseUrlAsync();
-        if (string.IsNullOrEmpty(baseUrl))
+        if (!_resourceByName.TryGetValue(resourceName, out var dashboardResource))
         {
+            Logger.LogDebug("Resource {ResourceName} not found in dashboard client", resourceName);
             return;
         }
 
-        // Try common OpenAPI endpoints
+        // Get URLs from the resource
+        if (dashboardResource.Urls.Length == 0)
+        {
+            Logger.LogDebug("Resource {ResourceName} has no URLs", resourceName);
+            return;
+        }
+
+        // Try each URL with common OpenAPI endpoints
         var openApiPaths = new[] { "/swagger/v1/swagger.json", "/openapi.json", "/api/openapi.json" };
         
-        foreach (var path in openApiPaths)
+        foreach (var urlViewModel in dashboardResource.Urls)
         {
-            try
+            var baseUrl = urlViewModel.Url.ToString().TrimEnd('/');
+            
+            foreach (var path in openApiPaths)
             {
-                var openApiUrl = $"{baseUrl.TrimEnd('/')}{path}";
-                var response = await _httpClient.GetAsync(openApiUrl);
-                
-                if (response.IsSuccessStatusCode)
+                try
                 {
-                    var content = await response.Content.ReadAsStringAsync();
-                    ParseOpenApiSpec(content);
-                    break;
+                    var openApiUrl = $"{baseUrl}{path}";
+                    Logger.LogDebug("Trying OpenAPI spec at {OpenApiUrl}", openApiUrl);
+                    
+                    var response = await _httpClient.GetAsync(openApiUrl);
+                    
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        Logger.LogInformation("Successfully retrieved OpenAPI spec from {OpenApiUrl}", openApiUrl);
+                        ParseOpenApiSpec(content);
+                        StateHasChanged();
+                        return; // Found and parsed successfully
+                    }
                 }
-            }
-            catch
-            {
-                // Continue to next path
+                catch (Exception ex)
+                {
+                    Logger.LogDebug(ex, "Failed to fetch OpenAPI spec from {BaseUrl}{Path}", baseUrl, path);
+                    // Continue to next path
+                }
             }
         }
 
+        Logger.LogDebug("No OpenAPI spec found for resource {ResourceName}", resourceName);
         StateHasChanged();
-    }
-
-    private static async Task<string?> TryGetResourceBaseUrlAsync()
-    {
-        // For now, return a placeholder. In a full implementation, this would
-        // query the resource's actual endpoints from the dashboard client
-        await Task.CompletedTask;
-        return "http://localhost:5000";
     }
 
     private void ParseOpenApiSpec(string openApiJson)
@@ -232,7 +280,26 @@ public partial class ApiTesting : IDisposable
     private void LoadEndpoint(OpenApiEndpoint endpoint)
     {
         _selectedMethod = endpoint.Method;
-        _requestUrl = endpoint.Path;
+        
+        // Try to get the base URL from the selected resource
+        var resourceName = PageViewModel.SelectedResource.Id?.ReplicaSetName ?? PageViewModel.SelectedResource.Id?.InstanceId;
+        if (!string.IsNullOrEmpty(resourceName) && _resourceByName.TryGetValue(resourceName, out var dashboardResource))
+        {
+            if (dashboardResource.Urls.Length > 0)
+            {
+                var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+                _requestUrl = $"{baseUrl}{endpoint.Path}";
+            }
+            else
+            {
+                _requestUrl = endpoint.Path;
+            }
+        }
+        else
+        {
+            _requestUrl = endpoint.Path;
+        }
+        
         StateHasChanged();
     }
 
@@ -390,9 +457,24 @@ public partial class ApiTesting : IDisposable
             if (!targetUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) && 
                 !targetUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                // For now, just use the URL as-is if it doesn't start with http
-                // TODO: Integrate with resource service to auto-populate base URLs
-                targetUrl = "http://localhost:5000/" + _requestUrl.TrimStart('/');
+                // Try to get base URL from selected resource
+                var resourceName = PageViewModel.SelectedResource.Id?.ReplicaSetName ?? PageViewModel.SelectedResource.Id?.InstanceId;
+                if (!string.IsNullOrEmpty(resourceName) && _resourceByName.TryGetValue(resourceName, out var dashboardResource))
+                {
+                    if (dashboardResource.Urls.Length > 0)
+                    {
+                        var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+                        targetUrl = $"{baseUrl}/{_requestUrl.TrimStart('/')}";
+                    }
+                    else
+                    {
+                        Logger.LogWarning("Resource {ResourceName} has no URLs, using relative URL as-is", resourceName);
+                    }
+                }
+                else
+                {
+                    Logger.LogWarning("No resource selected or resource not found, using relative URL as-is");
+                }
             }
 
             var stopwatch = Stopwatch.StartNew();
@@ -512,6 +594,8 @@ public partial class ApiTesting : IDisposable
     public void Dispose()
     {
         _resourcesSubscription?.Dispose();
+        _dashboardResourceSubscriptionCts?.Cancel();
+        _dashboardResourceSubscriptionCts?.Dispose();
         _httpClient.Dispose();
     }
 

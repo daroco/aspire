@@ -248,58 +248,66 @@ public partial class ApiTesting : IDisposable
 
         ResourceViewModel? dashboardResource = null;
         
-        // First try with ReplicaSetName (for replica resources)
-        if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.ReplicaSetName))
+        // FIRST: Try exact InstanceId match (this is the actual resource name like "catalogservice-pxmnvdbz")
+        if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
         {
-            var replicaSetName = PageViewModel.SelectedResource.Id.ReplicaSetName;
-            Logger.LogInformation("[API Testing] Trying to find resource by ReplicaSetName: {ReplicaSetName}", replicaSetName);
+            var instanceId = PageViewModel.SelectedResource.Id.InstanceId;
+            Logger.LogInformation("[API Testing] [1] Trying to find resource by exact InstanceId: {InstanceId}", instanceId);
             
-            // For replicas, try to find by ReplicaSetName or by full name with instance
-            if (!_resourceByName.TryGetValue(replicaSetName, out dashboardResource))
+            if (_resourceByName.TryGetValue(instanceId, out dashboardResource))
             {
-                Logger.LogDebug("[API Testing] Not found by exact ReplicaSetName");
-                
-                // Try with instance ID appended (full resource name)
-                if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
-                {
-                    var fullName = $"{replicaSetName}_{PageViewModel.SelectedResource.Id.InstanceId}";
-                    Logger.LogInformation("[API Testing] Trying with full name: {FullName}", fullName);
-                    _resourceByName.TryGetValue(fullName, out dashboardResource);
-                    
-                    if (dashboardResource != null)
-                    {
-                        Logger.LogInformation("[API Testing] Found resource by full name!");
-                    }
-                }
-                
-                // If still not found, try to find any resource starting with the replica set name
-                if (dashboardResource == null)
-                {
-                    Logger.LogInformation("[API Testing] Trying prefix match for: {ReplicaSetName}", replicaSetName);
-                    dashboardResource = _resourceByName.Values.FirstOrDefault(r => 
-                        r.Name.StartsWith(replicaSetName, StringComparison.OrdinalIgnoreCase));
-                    
-                    if (dashboardResource != null)
-                    {
-                        Logger.LogInformation("[API Testing] Found resource by prefix match: {ResourceName}", dashboardResource.Name);
-                    }
-                }
+                Logger.LogInformation("[API Testing] ✓ Found resource by exact InstanceId match: {ResourceName}", dashboardResource.Name);
+                return dashboardResource;
             }
             else
             {
-                Logger.LogInformation("[API Testing] Found resource by exact ReplicaSetName match!");
+                Logger.LogDebug("[API Testing] Not found by exact InstanceId");
             }
         }
-        // Fallback to InstanceId
-        else if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
+        
+        // SECOND: Try with ReplicaSetName (for resources without replicas or grouped resources)
+        if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.ReplicaSetName))
         {
-            var instanceId = PageViewModel.SelectedResource.Id.InstanceId;
-            Logger.LogInformation("[API Testing] Trying to find resource by InstanceId: {InstanceId}", instanceId);
-            _resourceByName.TryGetValue(instanceId, out dashboardResource);
+            var replicaSetName = PageViewModel.SelectedResource.Id.ReplicaSetName;
+            Logger.LogInformation("[API Testing] [2] Trying to find resource by ReplicaSetName: {ReplicaSetName}", replicaSetName);
+            
+            if (_resourceByName.TryGetValue(replicaSetName, out dashboardResource))
+            {
+                Logger.LogInformation("[API Testing] ✓ Found resource by exact ReplicaSetName match: {ResourceName}", dashboardResource.Name);
+                return dashboardResource;
+            }
+            else
+            {
+                Logger.LogDebug("[API Testing] Not found by exact ReplicaSetName");
+            }
+            
+            // Try with instance ID appended (pattern: ReplicaSetName_InstanceId)
+            if (!string.IsNullOrEmpty(PageViewModel.SelectedResource.Id.InstanceId))
+            {
+                var fullName = $"{replicaSetName}_{PageViewModel.SelectedResource.Id.InstanceId}";
+                Logger.LogInformation("[API Testing] [3] Trying with full name pattern: {FullName}", fullName);
+                
+                if (_resourceByName.TryGetValue(fullName, out dashboardResource))
+                {
+                    Logger.LogInformation("[API Testing] ✓ Found resource by full name pattern: {ResourceName}", dashboardResource.Name);
+                    return dashboardResource;
+                }
+                else
+                {
+                    Logger.LogDebug("[API Testing] Not found by full name pattern");
+                }
+            }
+            
+            // Last resort: prefix match (finds any resource starting with replica set name)
+            Logger.LogInformation("[API Testing] [4] Trying prefix match for: {ReplicaSetName}", replicaSetName);
+            dashboardResource = _resourceByName.Values.FirstOrDefault(r => 
+                r.Name.StartsWith(replicaSetName, StringComparison.OrdinalIgnoreCase));
             
             if (dashboardResource != null)
             {
-                Logger.LogInformation("[API Testing] Found resource by InstanceId!");
+                Logger.LogWarning("[API Testing] ! Found resource by prefix match (fallback): {ResourceName} - This may not be the exact instance selected!", 
+                    dashboardResource.Name);
+                return dashboardResource;
             }
         }
 

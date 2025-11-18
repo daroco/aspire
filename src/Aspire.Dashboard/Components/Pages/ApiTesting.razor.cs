@@ -232,6 +232,48 @@ public partial class ApiTesting : IDisposable
         _environmentVariables.AddRange(_apiTestingService.GetEnvironmentVariables());
     }
 
+    private static string CleanBaseUrl(string rawUrl)
+    {
+        // Strip UI-only paths from the base URL as they shouldn't be part of API base URLs
+        // Common UI paths: /swagger, /swagger/index.html, /openapi, etc.
+        // These are just UI endpoints, not the base URL for API calls
+        var baseUrl = rawUrl.TrimEnd('/');
+        
+        if (baseUrl.EndsWith("/swagger", StringComparison.OrdinalIgnoreCase) ||
+            baseUrl.EndsWith("/swagger/index.html", StringComparison.OrdinalIgnoreCase) ||
+            baseUrl.EndsWith("/openapi", StringComparison.OrdinalIgnoreCase))
+        {
+            var uri = new Uri(rawUrl);
+            var pathSegments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            
+            // Remove the last segment if it's a UI path
+            if (pathSegments.Length > 0)
+            {
+                var lastSegment = pathSegments[^1];
+                if (lastSegment.Equals("swagger", StringComparison.OrdinalIgnoreCase) ||
+                    lastSegment.Equals("index.html", StringComparison.OrdinalIgnoreCase) ||
+                    lastSegment.Equals("openapi", StringComparison.OrdinalIgnoreCase))
+                {
+                    baseUrl = $"{uri.Scheme}://{uri.Authority}";
+                    if (pathSegments.Length > 1)
+                    {
+                        // Rebuild path without the last segment(s)
+                        var segments = pathSegments.Take(pathSegments.Length - 1).ToList();
+                        // Also remove "swagger" from earlier positions if it exists
+                        segments.RemoveAll(s => s.Equals("swagger", StringComparison.OrdinalIgnoreCase) || 
+                                               s.Equals("openapi", StringComparison.OrdinalIgnoreCase));
+                        if (segments.Count > 0)
+                        {
+                            baseUrl += "/" + string.Join("/", segments);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return baseUrl;
+    }
+
     private ResourceViewModel? FindDashboardResource()
     {
         if (PageViewModel.SelectedResource.Id is null)
@@ -382,7 +424,15 @@ public partial class ApiTesting : IDisposable
         
         foreach (var urlViewModel in dashboardResource.Urls)
         {
-            var baseUrl = urlViewModel.Url.ToString().TrimEnd('/');
+            var rawUrl = urlViewModel.Url.ToString();
+            var baseUrl = CleanBaseUrl(rawUrl);
+            
+            if (rawUrl != baseUrl)
+            {
+                Logger.LogInformation("[API Testing] Cleaned base URL. Original: {RawUrl}, Cleaned: {BaseUrl}", rawUrl, baseUrl);
+                await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Cleaned base URL. Original:", rawUrl, "Cleaned:", baseUrl);
+            }
+            
             Logger.LogInformation("[API Testing] Trying base URL: {BaseUrl}", baseUrl);
             await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Trying base URL:", baseUrl);
             
@@ -390,24 +440,7 @@ public partial class ApiTesting : IDisposable
             {
                 try
                 {
-                    // Smart path construction: avoid duplication if base URL already contains part of the path
-                    // For example, if baseUrl is "https://localhost:5239/swagger" and path is "/swagger/v1/swagger.json",
-                    // we should construct "https://localhost:5239/swagger/v1/swagger.json" not "https://localhost:5239/swagger/swagger/v1/swagger.json"
                     var openApiUrl = baseUrl + path;
-                    
-                    // Check for common path duplications and fix them
-                    if (path.StartsWith("/swagger/", StringComparison.OrdinalIgnoreCase) && 
-                        baseUrl.EndsWith("/swagger", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Remove "/swagger" from the path since it's already in baseUrl
-                        openApiUrl = string.Concat(baseUrl, path.AsSpan("/swagger".Length));
-                    }
-                    else if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) && 
-                             baseUrl.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Remove "/api" from the path since it's already in baseUrl
-                        openApiUrl = string.Concat(baseUrl, path.AsSpan("/api".Length));
-                    }
                     
                     Logger.LogInformation("[API Testing] >>> Attempting to fetch OpenAPI spec from: {OpenApiUrl}", openApiUrl);
                     await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Attempting to fetch OpenAPI spec from:", openApiUrl);
@@ -514,7 +547,8 @@ public partial class ApiTesting : IDisposable
         var dashboardResource = FindDashboardResource();
         if (dashboardResource != null && dashboardResource.Urls.Length > 0)
         {
-            var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+            var rawUrl = dashboardResource.Urls[0].Url.ToString();
+            var baseUrl = CleanBaseUrl(rawUrl);
             _requestUrl = $"{baseUrl}{endpoint.Path}";
             Logger.LogInformation("[API Testing] Set request URL to: {Url}", _requestUrl);
             await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Set request URL to:", _requestUrl);
@@ -687,7 +721,8 @@ public partial class ApiTesting : IDisposable
                 var dashboardResource = FindDashboardResource();
                 if (dashboardResource != null && dashboardResource.Urls.Length > 0)
                 {
-                    var baseUrl = dashboardResource.Urls[0].Url.ToString().TrimEnd('/');
+                    var rawUrl = dashboardResource.Urls[0].Url.ToString();
+                    var baseUrl = CleanBaseUrl(rawUrl);
                     targetUrl = $"{baseUrl}/{_requestUrl.TrimStart('/')}";
                 }
                 else

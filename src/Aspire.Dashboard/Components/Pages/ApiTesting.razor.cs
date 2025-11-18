@@ -243,6 +243,7 @@ public partial class ApiTesting : IDisposable
         Logger.LogInformation("[API Testing] FindDashboardResource called. ReplicaSetName: {ReplicaSetName}, InstanceId: {InstanceId}", 
             PageViewModel.SelectedResource.Id.ReplicaSetName, 
             PageViewModel.SelectedResource.Id.InstanceId);
+        Logger.LogInformation("[API Testing] _resourceByName dictionary has {Count} resources", _resourceByName.Count);
         Logger.LogInformation("[API Testing] Available resources in _resourceByName: {Resources}", 
             string.Join(", ", _resourceByName.Keys));
 
@@ -367,6 +368,15 @@ public partial class ApiTesting : IDisposable
         Logger.LogInformation("[API Testing] Resource {ResourceName} has {UrlCount} URLs, attempting OpenAPI discovery", 
             dashboardResource.Name, dashboardResource.Urls.Length);
 
+        // Log all URLs that will be tried
+        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Will try OpenAPI discovery on these base URLs:");
+        for (int i = 0; i < dashboardResource.Urls.Length; i++)
+        {
+            var url = dashboardResource.Urls[i].Url.ToString();
+            Logger.LogInformation("[API Testing]   Base URL[{Index}]: {Url}", i, url);
+            await JSRuntime.InvokeVoidAsync("console.log", $"[API Testing]   Base URL[{i}]: {url}");
+        }
+
         // Try each URL with common OpenAPI endpoints
         var openApiPaths = new[] { "/swagger/v1/swagger.json", "/openapi.json", "/api/openapi.json" };
         
@@ -374,6 +384,7 @@ public partial class ApiTesting : IDisposable
         {
             var baseUrl = urlViewModel.Url.ToString().TrimEnd('/');
             Logger.LogInformation("[API Testing] Trying base URL: {BaseUrl}", baseUrl);
+            await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] Trying base URL:", baseUrl);
             
             foreach (var path in openApiPaths)
             {
@@ -381,10 +392,12 @@ public partial class ApiTesting : IDisposable
                 {
                     var openApiUrl = $"{baseUrl}{path}";
                     Logger.LogInformation("[API Testing] >>> Attempting to fetch OpenAPI spec from: {OpenApiUrl}", openApiUrl);
+                    await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Attempting to fetch OpenAPI spec from:", openApiUrl);
                     
                     var response = await _httpClient.GetAsync(openApiUrl);
                     
                     Logger.LogInformation("[API Testing] >>> Response status: {StatusCode}", response.StatusCode);
+                    await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Response status:", response.StatusCode.ToString());
                     
                     if (response.IsSuccessStatusCode)
                     {
@@ -401,12 +414,14 @@ public partial class ApiTesting : IDisposable
                     else
                     {
                         Logger.LogDebug("[API Testing] >>> Failed with status {StatusCode}", response.StatusCode);
+                        await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Failed with status:", response.StatusCode.ToString());
                     }
                 }
                 catch (Exception ex)
                 {
                     Logger.LogWarning(ex, "[API Testing] >>> Exception fetching OpenAPI spec from {BaseUrl}{Path}: {Message}", 
                         baseUrl, path, ex.Message);
+                    await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Exception:", ex.Message);
                     // Continue to next path
                 }
             }

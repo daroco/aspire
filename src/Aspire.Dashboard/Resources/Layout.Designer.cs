@@ -187,6 +187,15 @@ namespace Aspire.Dashboard.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to API Testing.
+        /// </summary>
+        public static string NavMenuApiTestingTab {
+            get {
+                return ResourceManager.GetString("NavMenuApiTestingTab", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Resources.
         /// </summary>
         public static string NavMenuResourcesTab {

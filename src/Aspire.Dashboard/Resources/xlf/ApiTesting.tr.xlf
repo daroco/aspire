@@ -1,0 +1,162 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="1.2" xsi:schemaLocation="urn:oasis:names:tc:xliff:document:1.2 xliff-core-1.2-transitional.xsd">
+  <file datatype="xml" source-language="en" target-language="tr" original="../ApiTesting.resx">
+    <body>
+      <trans-unit id="ApiTestingAddEnvironmentVariable">
+        <source>Add Variable</source>
+        <target state="new">Add Variable</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingAddToFavorites">
+        <source>Add to Favorites</source>
+        <target state="new">Add to Favorites</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingBodyPlaceholder">
+        <source>Request body (JSON, XML, etc.)</source>
+        <target state="new">Request body (JSON, XML, etc.)</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingBodyTab">
+        <source>Body</source>
+        <target state="new">Body</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingClearHistory">
+        <source>Clear History</source>
+        <target state="new">Clear History</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingEmptyState">
+        <source>Select a resource to begin testing APIs</source>
+        <target state="new">Select a resource to begin testing APIs</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingEndpoints">
+        <source>Endpoints</source>
+        <target state="new">Endpoints</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingEnvironmentVariables">
+        <source>Environment Variables</source>
+        <target state="new">Environment Variables</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingExport">
+        <source>Export</source>
+        <target state="new">Export</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingExportAsCSharp">
+        <source>Export as C#</source>
+        <target state="new">Export as C#</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingExportAsCurl">
+        <source>Export as cURL</source>
+        <target state="new">Export as cURL</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingFavoriteDescription">
+        <source>Description</source>
+        <target state="new">Description</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingFavoriteName">
+        <source>Name</source>
+        <target state="new">Name</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingFavorites">
+        <source>Favorites</source>
+        <target state="new">Favorites</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingHeader">
+        <source>API Testing</source>
+        <target state="new">API Testing</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingHeadersPlaceholder">
+        <source>Header-Name: Header-Value (one per line)</source>
+        <target state="new">Header-Name: Header-Value (one per line)</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingHeadersTab">
+        <source>Headers</source>
+        <target state="new">Headers</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingHistory">
+        <source>History</source>
+        <target state="new">History</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingLoadEndpoint">
+        <source>Load</source>
+        <target state="new">Load</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingPageTitle">
+        <source>{0} API Testing</source>
+        <target state="new">{0} API Testing</target>
+        <note>{0} is an application name</note>
+      </trans-unit>
+      <trans-unit id="ApiTestingRemoveFromFavorites">
+        <source>Remove from Favorites</source>
+        <target state="new">Remove from Favorites</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingRequestHeader">
+        <source>Request</source>
+        <target state="new">Request</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingResponseHeader">
+        <source>Response</source>
+        <target state="new">Response</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingSaveFavorite">
+        <source>Save</source>
+        <target state="new">Save</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingSendButton">
+        <source>Send</source>
+        <target state="new">Send</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingStatus">
+        <source>Status</source>
+        <target state="new">Status</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingTime">
+        <source>Time</source>
+        <target state="new">Time</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingTraceId">
+        <source>Trace ID</source>
+        <target state="new">Trace ID</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingUrlPlaceholder">
+        <source>Enter URL or path</source>
+        <target state="new">Enter URL or path</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingVariableKey">
+        <source>Key</source>
+        <target state="new">Key</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ApiTestingVariableValue">
+        <source>Value</source>
+        <target state="new">Value</target>
+        <note />
+      </trans-unit>
+    </body>
+  </file>
+</xliff>

@@ -152,6 +152,11 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Traces.resx</DependentUpon>
     </Compile>
+    <Compile Update="Resources\ApiTesting.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ApiTesting.resx</DependentUpon>
+    </Compile>
     <Compile Update="Resources\Routes.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -258,6 +263,13 @@
       <SubType>Designer</SubType>
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Traces.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Resources\ApiTesting.resx">
+      <XlfSourceFormat>Resx</XlfSourceFormat>
+      <XlfOutputItem>EmbeddedResource</XlfOutputItem>
+      <SubType>Designer</SubType>
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>ApiTesting.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Update="Resources\Routes.resx">
       <XlfSourceFormat>Resx</XlfSourceFormat>

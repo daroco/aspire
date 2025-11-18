@@ -390,7 +390,25 @@ public partial class ApiTesting : IDisposable
             {
                 try
                 {
-                    var openApiUrl = $"{baseUrl}{path}";
+                    // Smart path construction: avoid duplication if base URL already contains part of the path
+                    // For example, if baseUrl is "https://localhost:5239/swagger" and path is "/swagger/v1/swagger.json",
+                    // we should construct "https://localhost:5239/swagger/v1/swagger.json" not "https://localhost:5239/swagger/swagger/v1/swagger.json"
+                    var openApiUrl = baseUrl + path;
+                    
+                    // Check for common path duplications and fix them
+                    if (path.StartsWith("/swagger/", StringComparison.OrdinalIgnoreCase) && 
+                        baseUrl.EndsWith("/swagger", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Remove "/swagger" from the path since it's already in baseUrl
+                        openApiUrl = string.Concat(baseUrl, path.AsSpan("/swagger".Length));
+                    }
+                    else if (path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) && 
+                             baseUrl.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Remove "/api" from the path since it's already in baseUrl
+                        openApiUrl = string.Concat(baseUrl, path.AsSpan("/api".Length));
+                    }
+                    
                     Logger.LogInformation("[API Testing] >>> Attempting to fetch OpenAPI spec from: {OpenApiUrl}", openApiUrl);
                     await JSRuntime.InvokeVoidAsync("console.log", "[API Testing] >>> Attempting to fetch OpenAPI spec from:", openApiUrl);
                     
